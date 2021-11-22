@@ -1,0 +1,64 @@
+---
+title: "Basic Modelling"
+author: "Jonathan Cordell"
+date: "20/10/2021"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tibble)
+library(ggplot2)
+library(knitr)
+library(dplyr)
+library(formatR)
+opts_chunk$set(tidy.opts=list(width.cutoff=60),tidy=TRUE)
+```
+
+First I will set up the basic parameters of the model that are required
+```{r parameters}
+classSize <- 30
+maxTime <- 100
+#Rate of infection + background
+ROI <- 0.01
+BROI <- 0.01
+#Numbers found in different talks for avg rate of moving from 1 category to next, then using exponential CDF to work out probability of moving from 1 category to the next in 1 time step
+EtoP1StepProb <- pexp(1,rate=1/4.8)
+PtoI1StepProb <- pexp(1,rate=1/0.68)
+ItoR1StepProb <- pexp(1,rate=1/7)
+
+```
+Here I define the initial classroom
+```{r Setup}
+curTime <- 1
+#S=Susceptible, E=Pre-Symptomatic, P=Infectious w/out Symptoms, I=Infectious w/ Symptoms, R=Recovered
+class1 <- data.frame("S"=classSize,"E"=0,"P"=0,"I"=0,"R"=0)
+```
+
+Now I run the simulation for the next 99 timesteps, with people moving from one category to the next based on a binomial distribution, with n being based on the current timestep, and p being either defined above, or worked out as the force of infection in the case of S->I
+```{r TimeSteps}
+while (curTime<maxTime){
+  #Lambda is the force of infection via closed system (i.e. infectiousness from other people in school) + some background prob of being infected from outside life
+  lambda <- BROI + ROI/classSize*(class1[curTime,"P"] + class1[curTime,"I"])
+  #Using binomial distribution to have random number of people moving to next stage via 
+  StoE <- rbinom(1, class1[curTime,"S"], lambda)
+  EtoP <- rbinom(1, class1[curTime,"E"], EtoP1StepProb)
+  PtoI <- rbinom(1, class1[curTime,"P"], PtoI1StepProb)
+  ItoR <- rbinom(1, class1[curTime,"I"], ItoR1StepProb)
+  
+  newS <- class1[curTime,"S"] - StoE
+  newE <- class1[curTime,"E"] + StoE - EtoP
+  newP <- class1[curTime,"P"] + EtoP - PtoI
+  newI <- class1[curTime,"I"] + PtoI - ItoR
+  newR <- class1[curTime,"R"] + ItoR
+  
+  class1 <- add_row(class1, "S"=newS, "E"=newE, "P"=newP, "I"=newI, "R"=newR)
+  
+  curTime=curTime+1
+}
+```
+Plotting the values in each timestep as a stacked bargraph with a legend
+```{r Plotting}
+barplot(t(as.matrix(class1)), col=c("red","orange","yellow","green","cyan"), xlab="Days", ylab="Students")
+legend("topright", colnames(class1), fill=c("red","orange","yellow","green","cyan"), bg="white")
+```
