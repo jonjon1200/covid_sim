@@ -1,0 +1,92 @@
+---
+title: "Model"
+author: "Jonathan Cordell"
+date: "27/10/2021"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tibble)
+library(ggplot2)
+library(knitr)
+library(formatR)
+library(dplyr)
+opts_chunk$set(tidy.opts=list(width.cutoff=60),tidy=TRUE)
+```
+```{r parameters}
+classSize <- 300
+maxTime <- 50
+#Rate of infection + background
+backgroundROI <- 3300/67000000 #https://www.ons.gov.uk/peoplepopulationandcommunity/populationandmigration/populationestimates
+catchRate <- 0.7
+tmp <- rep(list(c()), 50)
+```
+
+
+
+```{r functions}
+infecRate <- function(infected){
+  allInfec <- apply(infected, 1, function(a) as.double(a["spreadMult"]))
+  return (sum(allInfec))
+}
+
+newState <- function(time, student){
+  if(student["state"]=="S"){
+    infected <- subset(timeList[[time]],(state=="I"))
+    studentNo <- infecRate(infected)
+    lambda <- backgroundROI + as.double(student["catchMult"][[1]]) * catchRate *  studentNo/classSize
+    tmp[[time]] <<- c(tmp[[time]], lambda)
+    coinFlipI <- rbinom(1,1,lambda)
+    if (coinFlipI>0){
+      student["state"]="I"
+      student["timeInState"]=1
+    }else{
+      student["timeInState"]<-as.double(student["timeInState"])+1
+    }
+  }else if(student["state"]=="I"){
+    lambda <- pexp(1,rate=1/7)
+    coinFlipR <- rbinom(1,1,lambda)
+    if ( coinFlipR == 1 || as.double(student["timeInState"])==15){
+      student["state"]="R"
+      student["timeInState"]=1
+    }else{
+      student["timeInState"]<-as.double(student["timeInState"])+1
+    }
+  }else{
+    student["timeInState"]<-as.double(student["timeInState"])+1
+  }
+  return (student)
+}
+```
+
+
+```{r}
+studentID = c(1:classSize)
+spreadMult = rnorm(classSize, mean=1, sd=0.1)
+catchMult = rnorm(classSize, mean=1, sd=0.1)
+state = c("I",rep("S",classSize-1))
+timeInState = rep(1,classSize)
+class1 <- tibble(studentID, spreadMult, catchMult, state, timeInState)
+multFrame <- tibble(studentID, spreadMult, catchMult)
+```
+
+```{r}
+timeList <- list(class1)
+for (i in (2:maxTime)){
+  tempClass <- as_tibble(t(apply(timeList[[i-1]],1,newState,time=i-1)))
+  timeList <- append(timeList, list(tempClass))
+}
+```
+
+```{r Plotting}
+population <- data.frame("S"=classSize-1,"I"=1, "R"=0)
+for (i in (2:maxTime)){
+  Sno <- nrow(filter(timeList[[i]], state=="S"))
+  Ino <- nrow(filter(timeList[[i]], state=="I"))
+  Rno <- classSize-Sno-Ino
+  population <- add_row(population, "S"=Sno, "I"=Ino, "R"=Rno)
+}
+  barplot(t(as.matrix(population)), col=c("cyan","yellow","red"), xlab="Days", ylab="Students", names.arg=(1:maxTime))
+legend("topright", colnames(population), fill=c("cyan","yellow","red"), bg="white")
+```
