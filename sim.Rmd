@@ -31,17 +31,16 @@ probs <- list("L"=list("TP"=67/100,"TN"=99850/99900),"P"=list("TP"=95/100,"TN"=9
 #https://www.ons.gov.uk/peoplepopulationandcommunity/healthandsocialcare/conditionsanddiseases/methodologies/covid19infectionsurveypilotmethodsandfurtherinformation
 quarantineTime=10
 catchRate <- 0.7
-testInterval <- 7
+testDays <- c(5,7)
 startingInfected <- 5
 ```
 
 ```{r functions}
 gammaRate <- function(infected, year, tOrS){
   if(nrow(infected)==0){return (0)}
-  #ADD ALL TEACHERS 1.5X INFECTIVE TO EACH OTHER
-  #ADD SUBJECT TEACHER 1.5X INFECTED
   inClass <- infected[which(infected["yearID"]==2),]
   outClass <- infected[!infected["studentID"] %in% inClass["studentID"],]
+  
   
   if (dim(inClass[which(inClass["studentOrTeacher"]=="t"),])[1]!=0){
     inClass[which(inClass["studentOrTeacher"]=="t"),]["spreadMult"] <- sapply(inClass[which(inClass["studentOrTeacher"]=="t"),]["spreadMult"], function(a) as.character(as.double(a)*3)) #Teachers 3X infective as typical student
@@ -73,7 +72,7 @@ newState <- function(time, student){
     studentNo <- gammaRate(infected, student["yearID"], student["studentOrTeacher"])
     lambda <- backgroundROI + as.double(student["catchMult"][[1]]) * catchRate *  studentNo/popSize
     coinFlipI <- rbinom(1,1,lambda)
-    coinFlipQ <- rbinom(1,1,(1-probs[[testType]][["TN"]]) * as.numeric(time%%testInterval==0))
+    coinFlipQ <- rbinom(1,1,(1-probs[[testType]][["TN"]]) * as.numeric((time%%7) %in% testDays))
     if (coinFlipQ==1){
       student["state"]="Q"
       student["timeInState"]=1
@@ -89,8 +88,8 @@ newState <- function(time, student){
     lambda <- dgamma(as.double(student["timeInState"][[1]]),shape=gammaParams["recover.shape"],scale=gammaParams["recover.scale"])
     scaledInfectiousness <-  dgamma(as.double(student["timeInState"][[1]]),shape=gammaParams["spread.shape"],scale=gammaParams["spread.scale"]) / dgamma(gammaParams["spread.shape"]*gammaParams["spread.scale"],shape=gammaParams["spread.shape"],scale=gammaParams["spread.scale"])
     coinFlipI <- rbinom(1,1,lambda)
-    coinFlipQ <- rbinom(1,1,as.numeric(time%%7==0)*probs[[testType]][["TP"]]*scaledInfectiousness)
-    if (coinFlipQ == 1){
+    coinFlipQ <- rbinom(1,1,probs[[testType]][["TP"]]*scaledInfectiousness)
+    if (coinFlipQ == 1 && (time%%7) %in% testDays){
       student["state"]="Q"
       student["timeInState"]=1
     }else if ( coinFlipI == 1 || as.double(student["timeInState"])==15){
@@ -141,15 +140,23 @@ for (i in (2:maxTime)){
 
 ```{r Plotting}
 population <- data.frame("S"=popSize-startingInfected,"I"=startingInfected, "Q"=0, "R"=0)
+infectionEnd <- -1
 for (i in (2:maxTime)){
   Sno <- nrow(filter(timeList[[i]], state=="S"))
   Ino <- nrow(filter(timeList[[i]], state=="I"))
   Qno <- nrow(filter(timeList[[i]], state=="Q"))
   Rno <- popSize-Sno-Ino-Qno
+  if (infectionEnd == -1 && Ino == 0){infectionEnd <- i}
   population <- add_row(population, "S"=Sno, "I"=Ino, "Q"=Qno, "R"=Rno)
 }
   barplot(t(as.matrix(population)), col=c("cyan","yellow", "grey","red"), xlab="Days", ylab="Students", names.arg=(1:maxTime))
 legend("topright", colnames(population), fill=c("cyan","yellow", "grey","red"), bg="white")
+```
+
+```{r Summary}
+paste("Total time spent quarantining was",sum(population["Q"]))
+paste("Final number of infected individuals was", population[maxTime,"R"], "out of a possible",popSize)
+paste("Infeciton died out in",infectionEnd,"days")
 ```
 
 ```{r endTime}
