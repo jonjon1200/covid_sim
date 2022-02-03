@@ -13,26 +13,29 @@ library(ggplot2)
 library(knitr)
 library(formatR)
 library(dplyr)
+library(shiny)
 opts_chunk$set(tidy.opts=list(width.cutoff=60),tidy=TRUE)
 ```
 
 ```{r parameters}
-classSize <- 30
-noYears <- 6
-subjectTeachers <- 0
-popSize <- (classSize+1)*noYears + subjectTeachers
-maxTime <- 100
-#Rate of infection + background
-backgroundROI <- 3300/67000000 #https://www.ons.gov.uk/peoplepopulationandcommunity/populationandmigration/populationestimates
-gammaParams <- c("spread.shape"=10,"spread.scale"=0.8,"recover.shape"=17,"recover.scale"=0.8)
-testType <- "L"
-probs <- list("L"=list("TP"=67/100,"TN"=99850/99900),"P"=list("TP"=95/100,"TN"=99.2/100), "N"=list("TP"=0,"TN"=1))
-#https://www.bmj.com/content/373/bmj.n1411/rr
-#https://www.ons.gov.uk/peoplepopulationandcommunity/healthandsocialcare/conditionsanddiseases/methodologies/covid19infectionsurveypilotmethodsandfurtherinformation
-quarantineTime=10
-catchRate <- 0.7
-testDays <- c(5,7)
-startingInfected <- 5
+load("variables.Rdata")
+# classSize <- 30
+# noYears <- 6
+# subjectTeachers <- 0
+# maxTime <- 100
+# #Rate of infection + background
+# backgroundROI <- 3300/67000000 #https://www.ons.gov.uk/peoplepopulationandcommunity/populationandmigration/populationestimates
+# gammaParams <- c("spread.shape"=10,"spread.scale"=0.8,"recover.shape"=17,"recover.scale"=0.8)
+# testType <- "L"
+# probs <- list("L"=list("TP"=67/100,"TN"=99850/99900),"P"=list("TP"=95/100,"TN"=99.2/100), "N"=list("TP"=0,"TN"=1))
+# #https://www.bmj.com/content/373/bmj.n1411/rr
+# #https://www.ons.gov.uk/peoplepopulationandcommunity/healthandsocialcare/conditionsanddiseases/methodologies/covid19infectionsurveypilotmethodsandfurtherinformation
+# quarantineTime=10
+# catchRate <- 0.7
+# testDays <- c(5,7)
+# startingInfected <- 5
+# save(classSize, noYears, subjectTeachers, maxTime, backgroundROI, gammaParams, testType, probs, quarantineTime, catchRate, testDays, startingInfected, file="variables.Rdata")
+
 ```
 
 ```{r functions}
@@ -117,6 +120,7 @@ newState <- function(time, student){
 ```
 
 ```{r Start variables}
+popSize <- (classSize+1)*noYears + subjectTeachers
 studentID = c(1:popSize)
 yearID <- sort(rep(1:noYears,(classSize+1)))
 spreadMult = rnorm(popSize, mean=1, sd=0.1)
