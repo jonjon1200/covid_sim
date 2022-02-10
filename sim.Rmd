@@ -18,23 +18,24 @@ opts_chunk$set(tidy.opts=list(width.cutoff=60),tidy=TRUE)
 ```
 
 ```{r parameters}
-load("variables.Rdata")
-# classSize <- 30
-# noYears <- 6
-# subjectTeachers <- 0
-# maxTime <- 100
-# #Rate of infection + background
-# backgroundROI <- 3300/67000000 #https://www.ons.gov.uk/peoplepopulationandcommunity/populationandmigration/populationestimates
-# gammaParams <- c("spread.shape"=10,"spread.scale"=0.8,"recover.shape"=17,"recover.scale"=0.8)
-# testType <- "L"
-# probs <- list("L"=list("TP"=67/100,"TN"=99850/99900),"P"=list("TP"=95/100,"TN"=99.2/100), "N"=list("TP"=0,"TN"=1))
-# #https://www.bmj.com/content/373/bmj.n1411/rr
-# #https://www.ons.gov.uk/peoplepopulationandcommunity/healthandsocialcare/conditionsanddiseases/methodologies/covid19infectionsurveypilotmethodsandfurtherinformation
-# quarantineTime=10
-# catchRate <- 0.7
-# testDays <- c(5,7)
-# startingInfected <- 5
-# save(classSize, noYears, subjectTeachers, maxTime, backgroundROI, gammaParams, testType, probs, quarantineTime, catchRate, testDays, startingInfected, file="variables.Rdata")
+#load("variables.Rdata")
+classSize <- 30
+noYears <- 6
+subjectTeachers <- 0
+maxTime <- 100
+#Rate of infection + background
+backgroundROI <- 3300/67000000 #https://www.ons.gov.uk/peoplepopulationandcommunity/populationandmigration/populationestimates
+gammaParams <- c("spread.shape"=10,"spread.scale"=0.8,"recover.shape"=17,"recover.scale"=0.8)
+testType <- "L"
+probs <- list("L"=list("TP"=67/100,"TN"=99850/99900),"P"=list("TP"=95/100,"TN"=99.2/100), "N"=list("TP"=0,"TN"=1))
+#https://www.bmj.com/content/373/bmj.n1411/rr
+#https://www.ons.gov.uk/peoplepopulationandcommunity/healthandsocialcare/conditionsanddiseases/methodologies/covid19infectionsurveypilotmethodsandfurtherinformation
+quarantineTime=10
+catchRate <- 0.7
+testDays <- c(5,7)
+startingInfected <- 5
+quarantineThreshold <- 30
+save(classSize, noYears, subjectTeachers, maxTime, backgroundROI, gammaParams, testType, probs, quarantineTime, catchRate, testDays, startingInfected, quarantineThreshold, file="variables.Rdata")
 
 ```
 
@@ -157,10 +158,25 @@ for (i in (2:maxTime)){
 legend("topright", colnames(population), fill=c("cyan","yellow", "grey","red"), bg="white")
 ```
 
+
+```{r Class Info}
+classVar <- c()
+classMax <- 0
+for (i in 1:noYears){
+  tmp <- sapply(timeList,function(a)(nrow(a[which(a["yearID"]==i & a["state"]=="Q"),] )))
+    classVar <- c(classVar, var(tmp))
+    classMax <- max(classMax, max(tmp))
+}
+```
+
 ```{r Summary}
 paste("Total time spent quarantining was",sum(population["Q"]))
+paste("Average time spent quarantining was",round(sum(population["Q"])/popSize,digits=1),"out of a possible",maxTime)
 paste("Final number of infected individuals was", population[maxTime,"R"], "out of a possible",popSize)
 paste("Infeciton died out in",infectionEnd,"days")
+paste("Number of days with more than",quarantineThreshold,"quarantined was",length(population["Q"][population["Q"]>quarantineThreshold]))
+paste("The average variance in class size was",mean(classVar))
+paste("The maximum number of students absent in a single class at a given time was",classMax)
 ```
 
 ```{r endTime}
