@@ -2,18 +2,25 @@
 title: "multiSim"
 author: "Jonathan Cordell"
 date: "17/02/2022"
-output: pdf_document
+output: 
+  pdf_document:
+    pandoc_args: --listings
+    includes:
+      in_header: preamble.tex
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(tidy.opts=list(width.cutoff=60),tidy=TRUE)
+library(ggplot2)
+library(knitr)
 ```
 
 ```{r, include=FALSE}
 source("sim.R")$value
 ```
 
-```{r}
+```{r, include=FALSE}
 default.classSize <- 30
 default.noYears <- 6
 default.subjectTeachers <- 0
@@ -22,12 +29,12 @@ default.maxTime <- 100
 default.backgroundROI <- 3300/67000000 #https://www.ons.gov.uk/peoplepopulationandcommunity/populationandmigration/populationestimates
 default.gammaParams <- c("spread.shape"=10,"spread.scale"=0.8,"recover.shape"=17,"recover.scale"=0.8)
 default.testType <- "Lateral"
-default.probs <- list("Lateral"=list("TP"=67/100,"TN"=99850/99900),"PCR"=list("TP"=95/100,"TN"=99.2/100), "None"=list("TP"=0,"TN"=1))
+default.probs <- list("Lateral"=list("TP"=67/100,"TN"=99850/99900),"PCR"=list("TP"=92/100,"TN"=99.2/100), "None"=list("TP"=0,"TN"=1))
 #https://www.bmj.com/content/373/bmj.n1411/rr
 #https://www.ons.gov.uk/peoplepopulationandcommunity/healthandsocialcare/conditionsanddiseases/methodologies/covid19infectionsurveypilotmethodsandfurtherinformation
 default.quarantineTime=10
 default.catchRate <- 0.7
-default.testDays <- c(5,7)
+default.testDays <- c(5,0)
 default.startingInfected <- 5
 default.quarantineThreshold <- 30
 default.teacherInfective <- 3
@@ -38,42 +45,72 @@ default.weekend <- c(0.3,10)
 default.maxIPeriod <- 20
 # save(classSize, noYears, subjectTeachers, maxTime, backgroundROI, gammaParams, testType, probs, quarantineTime, catchRate, testDays, startingInfected, quarantineThreshold, teacherInfective, teacherInfectible, teacherTeacher, nonClass, weekend, maxIPeriod, file="variables.Rdata")
 ```
-```{r}
-findAvg <- function(classSize=default.classSize,noYears=default.noYears,subjectTeachers=default.subjectTeachers,maxTime=default.maxTime,backgroundROI=default.backgroundROI,gammaParams=default.gammaParams,testType=default.testType,probs=default.probs,quarantineTime=default.quarantineTime,catchRate=default.catchRate,testDays=default.testDays,startingInfected=default.startingInfected,quarantineThreshold=default.quarantineThreshold,teacherInfective=default.teacherInfective,teacherInfectible=default.teacherInfectible,teacherTeacher=default.teacherTeacher,nonClass=default.nonClass,weekend=default.weekend,maxIPeriod=default.maxIPeriod){
-  x<-NULL
-  for (i in 1:10){
-    x<-rbind(x,sim(classSize, noYears, subjectTeachers, maxTime, backgroundROI, gammaParams, testType, probs, quarantineTime, catchRate, testDays, startingInfected, quarantineThreshold, teacherInfective, teacherInfectible, teacherTeacher, nonClass, weekend, maxIPeriod))
+```{r, include=FALSE}
+findAvg <- function(classSize=default.classSize,noYears=default.noYears,subjectTeachers=default.subjectTeachers,maxTime=default.maxTime,backgroundROI=default.backgroundROI,gammaParams=default.gammaParams,testType=default.testType,probs=default.probs,quarantineTime=default.quarantineTime,catchRate=default.catchRate,testDays=default.testDays,startingInfected=default.startingInfected,quarantineThreshold=default.quarantineThreshold,teacherInfective=default.teacherInfective,teacherInfectible=default.teacherInfectible,teacherTeacher=default.teacherTeacher,nonClass=default.nonClass,weekend=default.weekend,maxIPeriod=default.maxIPeriod,runs=10){
+  summary<-NULL
+  populations<-data.frame("S"=rep(0,maxTime),"I"=rep(0,maxTime),"Q"=rep(0,maxTime),"R"=rep(0,maxTime))
+  for (i in 1:runs){
+    res <- sim(classSize, noYears, subjectTeachers, maxTime, backgroundROI, gammaParams, testType, probs, quarantineTime, catchRate, testDays, startingInfected, quarantineThreshold, teacherInfective, teacherInfectible, teacherTeacher, nonClass, weekend, maxIPeriod)
+    summary<-rbind(summary,res$summary)
+    populations<-populations+res$populations
   }
-  return(data.frame(t(colMeans(x))))
+  result <- list("summary"=data.frame(t(colMeans(summary))),"populations"=populations/10)
+  return(result)
 }  
 ```
 
 
-```{r, warning=FALSE, message=FALSE}
-print("Base case parameters:")
-paste("Class size of",default.classSize)
-paste(default.noYears,"years in the school")
-paste(default.subjectTeachers,"subject teachers")
-paste("Simulation runs for",default.maxTime,"time steps")
-paste("Background Rate of Infection of",default.backgroundROI)
-paste("Individuals viral load over time modelled as gamma distribution with shape",default.gammaParams["spread.shape"],"and scale",default.gammaParams["spread.scale"])
-paste("Individuals probability of recovering over time modelled as gamma distribution with shape",default.gammaParams["recover.shape"],"and scale",default.gammaParams["recover.scale"])
-paste("Testing type is",default.testType,"which has true positive rate of",default.probs[[default.testType]]$TP,"and true negative rate of",default.probs[[default.testType]]$TN)
-paste("Testing is done on days",toString(default.testDays))
-paste("Time spent quarantining is",default.quarantineTime,"days")
-paste("The base probability of catching the disease is",default.catchRate)
-paste("Starting number of infected is",default.startingInfected)
-paste("Threshold of quarantining individuals considered noteworthy is",default.quarantineThreshold)
-paste("Teacher to their student infection multiplier set to", default.teacherInfective)
-paste("Student to their teacher infection multiplier set to", default.teacherInfectible)
-paste("Teacher to teacher infection multiplier set to", default.teacherTeacher)
-paste("Infection multiplier for students in seperate classes set to",  default.nonClass)
-paste("During weekends, probability of infection from school is multiplied by",default.weekend[1],"whilst infection from other sources is multiplied by",default.weekend[2])
-paste("The maximum possible time to be infectious is taken to be", default.maxIPeriod)
+```{r, warning=FALSE, message=FALSE, echo=FALSE}
+str<-("Base case parameters:")
+str<-paste(str,paste("Class size of",default.classSize),"\n",sep="")
+str<-paste(str,paste(default.noYears,"years in the school"),"\n",sep="")
+str<-paste(str,paste(default.subjectTeachers,"subject teachers"),"\n",sep="")
+str<-paste(str,paste("Simulation runs for",default.maxTime,"time steps"),"\n",sep="")
+str<-paste(str,paste("Background Rate of Infection of",default.backgroundROI),"\n",sep="")
+str<-paste(str,paste("Individuals viral load over time modelled as gamma distribution with shape",default.gammaParams["spread.shape"],"and scale",default.gammaParams["spread.scale"]),"\n",sep="")
+str<-paste(str,paste("Individuals probability of recovering over time modelled as gamma distribution with shape",default.gammaParams["recover.shape"],"and scale",default.gammaParams["recover.scale"]),"\n",sep="")
+str<-paste(str,paste("Testing type is",default.testType,"which has true positive rate of",default.probs[[default.testType]]$TP,"and true negative rate of",default.probs[[default.testType]]$TN),"\n",sep="")
+str<-paste(str,paste("Testing is done on days",toString(default.testDays)),"\n",sep="")
+str<-paste(str,paste("Time spent quarantining is",default.quarantineTime,"days"),"\n",sep="")
+str<-paste(str,paste("The base probability of catching the disease is",default.catchRate),"\n",sep="")
+str<-paste(str,paste("Starting number of infected is",default.startingInfected),"\n",sep="")
+str<-paste(str,paste("Threshold of quarantining individuals considered noteworthy is",default.quarantineThreshold),"\n",sep="")
+str<-paste(str,paste("Teacher to their student infection multiplier set to", default.teacherInfective),"\n",sep="")
+str<-paste(str,paste("Student to their teacher infection multiplier set to", default.teacherInfectible),"\n",sep="")
+str<-paste(str,paste("Teacher to teacher infection multiplier set to", default.teacherTeacher),"\n",sep="")
+str<-paste(str,paste("Infection multiplier for students in seperate classes set to",  default.nonClass),"\n",sep="")
+str<-paste(str,paste("During weekends, probability of infection from school is multiplied by",default.weekend[1],"whilst infection from other sources is multiplied by",default.weekend[2]),"\n",sep="")
+str<-paste(str,paste("The maximum possible time to be infectious is taken to be", default.maxIPeriod),"\n",sep="")
+cat(str)
+```
 
-results <- cbind(name="Base Case",findAvg())
-results <- rbind(results,cbind(name="PCR once per week",findAvg(testType="PCR", testDays=c(6))))
-results <- rbind(results,cbind(name="No testing",findAvg(testType="None")))
-results <- rbind(results,cbind(name="15 starting infected",findAvg(startingInfected=15)))
-print(results)
+```{r}
+popPlot<-function(data, label){
+  barplot(t(as.matrix(data)), col=c("cyan","yellow", "grey","red"), xlab="Days", ylab="Individuals", names.arg=(1:nrow(data)),main=label)
+  legend("topright", colnames(data), fill=c("cyan","yellow", "grey","red"), bg="white")
+}
+```
+
+```{r}
+baseCase<-findAvg(runs=2)
+test<-findAvg(catchRate=2,runs=2)
+test2<-findAvg(probs=list("Lateral"=c("TP"=0.4,"TN"=0.8)),runs=2)
+
+results <- cbind(name="Base Case",baseCase$summary)
+results <- rbind(results,cbind(name="test",test$summary))
+results <- rbind(results,cbind(name="test2",test2$summary))
+
+```
+
+
+```{r}
+kable(results)
+```
+
+```{r, fig.show="hold", out.width="50%"}
+popPlot(baseCase$populations,"Base Case")
+popPlot(test$populations,"test")
+popPlot(test2$populations,"test2")
+
+
 ```

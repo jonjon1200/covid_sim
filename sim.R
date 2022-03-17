@@ -3,11 +3,9 @@ sim <- function(classSize, noYears, subjectTeachers, maxTime, backgroundROI, gam
   tb<-Sys.time()
   knitr::opts_chunk$set(echo = TRUE)
   library(tibble)
-  library(ggplot2)
   library(knitr)
   library(formatR)
   library(dplyr)
-  library(shiny)
   opts_chunk$set(tidy.opts=list(width.cutoff=60),tidy=TRUE)
   
   
@@ -117,7 +115,7 @@ sim <- function(classSize, noYears, subjectTeachers, maxTime, backgroundROI, gam
     tempYear <- as_tibble(t(apply(timeList[[i-1]],1,newState,time=i-1)))
     timeList <- append(timeList, list(tempYear))
   }
-  
+
   
   ## ----Plotting----------------------------------------------------------------
   population <- data.frame("S"=popSize-startingInfected,"I"=startingInfected, "Q"=0, "R"=0)
@@ -130,7 +128,6 @@ sim <- function(classSize, noYears, subjectTeachers, maxTime, backgroundROI, gam
     if (infectionEnd == -1 && Ino == 0){infectionEnd <- i}
     population <- add_row(population, "S"=Sno, "I"=Ino, "Q"=Qno, "R"=Rno)
   }
-  
   
   ## ----Class Info--------------------------------------------------------------
   classVar <- c()
@@ -152,5 +149,5 @@ sim <- function(classSize, noYears, subjectTeachers, maxTime, backgroundROI, gam
   "meanVar"=mean(classVar),
   "runTime"=as.double(Sys.time()-tb)
   ) 
-  return(summaryInfo)
+  return(list("summary"=summaryInfo,"populations"=population))
 }
