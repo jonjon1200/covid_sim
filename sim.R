@@ -1,4 +1,8 @@
-sim <- function(classSize, noYears, subjectTeachers, maxTime, backgroundROI, gammaParams, testType, probs, quarantineTime, catchRate, testDays, startingInfected, quarantineThreshold, teacherInfective, teacherInfectible, teacherTeacher, nonClass, weekend, maxIPeriod){
+sim <- function(classSize, noYears, subjectTeachers, maxTime, backgroundROI,
+                gammaParams, testType, probs, quarantineTime, catchRate, testDays,
+                startingInfected, quarantineThreshold, teacherInfective, teacherInfectible,
+                teacherTeacher, nonClass, weekend, maxIPeriod, percVacc, vaccEff, whoMask,
+                maskEff){
   ## ----setup, include=FALSE----------------------------------------------------
   tb<-Sys.time()
   knitr::opts_chunk$set(echo = TRUE)
@@ -104,6 +108,11 @@ sim <- function(classSize, noYears, subjectTeachers, maxTime, backgroundROI, gam
   state[sample.int(popSize,startingInfected)]<-"I"
   timeInState = rep(1,popSize)
   studentOrTeacher <- rep(c(rep("s",classSize),"t"),noYears)
+  vaccinated<-sample(popSize,floor(popSize*percVacc))
+  spreadMult[vaccinated]<-spreadMult[vaccinated]*(1-vaccEff$spread)
+  catchMult[vaccinated]<-catchMult[vaccinated]*(1-vaccEff$catch)
+  spreadMult[which(studentOrTeacher %in% whoMask)] <- spreadMult[which(studentOrTeacher %in% whoMask)]*(1-maskEff)
+  if(length(vaccinated)==0){vaccinated=1000}
   
   school <- tibble(studentID, yearID, spreadMult, catchMult, state, timeInState, studentOrTeacher)
   multFrame <- tibble(studentID, spreadMult, catchMult)
@@ -143,10 +152,13 @@ sim <- function(classSize, noYears, subjectTeachers, maxTime, backgroundROI, gam
   summaryInfo <- data.frame(
   "totalQ"=sum(population["Q"]),
   "avgQ"=round(sum(population["Q"])/popSize,digits=1),
-  "finalI"=population[maxTime,"R"],
+  "finalI"=population[maxTime,"R"]+population[maxTime,"I"],
   "infectionEnd"=infectionEnd,
   "overThreshold"=length(population["Q"][population["Q"]>quarantineThreshold]),
   "meanVar"=mean(classVar),
+  "meanInfperDay"=mean(population[2:maxTime,"R"]-population[1:(maxTime-1),"R"]),
+  "percVaccInfected"=length(which(timeList[[100]][vaccinated,"state"]=="R" | timeList[[100]][vaccinated,"state"]=="I"))/length(vaccinated),
+  "percUnVaccInfeced"=length(which(timeList[[100]][-vaccinated,"state"]=="R" | timeList[[100]][-vaccinated,"state"]=="I"))/(popSize-length(vaccinated)),
   "runTime"=as.double(Sys.time()-tb)
   ) 
   return(list("summary"=summaryInfo,"populations"=population))
