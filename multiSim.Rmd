@@ -29,29 +29,30 @@ default.maxTime <- 100
 default.backgroundROI <- 3300/67000000 
 default.gammaParams <- c("spread.shape"=10,"spread.scale"=0.8,"recover.shape"=17,"recover.scale"=0.8)
 default.testType <- "Lateral"
-default.probs <- list("Lateral"=list("TP"=47/100,"TN"=99850/99900),"PCR"=list("TP"=67/100,"TN"=99.2/100), "None"=list("TP"=0,"TN"=1))
-default.quarantineTime=10
+default.probs <- list("Lateral"=list("TP"=60/100,"TN"=95/100),"PCR"=list("TP"=90/100,"TN"=99.2/100), "None"=list("TP"=0,"TN"=1))
+default.quarantineTime=5
 default.catchRate <- 0.9
 default.testDays <- c(5,0)
 default.startingInfected <- 5
 default.quarantineThreshold <- 30
-default.teacherInfective <- 3
-default.teacherInfectible <- 1.5
-default.teacherTeacher <- 1.5
-default.nonClass <- 0.7
+default.teacherInfective <- 6
+default.teacherInfectible <- 6
+default.teacherTeacher <- 3
+default.classMult <- 3
+default.nonClass <- 0.6
 default.weekend <- c(0.3,10)
 default.maxIPeriod <- 20
-default.percVacc <- 0.3
-default.vaccEff <- list("spread"=0.3,"catch"=0.2)
-default.whoMask <- c("s","t")
-default.maskEff <- 0.15
+default.percVacc <- 0.0
+default.vaccEff <- list("spread"=0.35,"catch"=0.6)
+default.whoMask <- c("None")
+default.maskEff <- 0.6
 ```
 ```{r, include=FALSE}
-findAvg <- function(classSize=default.classSize,noYears=default.noYears,subjectTeachers=default.subjectTeachers,maxTime=default.maxTime,backgroundROI=default.backgroundROI,gammaParams=default.gammaParams,testType=default.testType,probs=default.probs,quarantineTime=default.quarantineTime,catchRate=default.catchRate,testDays=default.testDays,startingInfected=default.startingInfected,quarantineThreshold=default.quarantineThreshold,teacherInfective=default.teacherInfective,teacherInfectible=default.teacherInfectible,teacherTeacher=default.teacherTeacher,nonClass=default.nonClass,weekend=default.weekend,maxIPeriod=default.maxIPeriod,percVacc=default.percVacc,vaccEff=default.vaccEff,whoMask=default.whoMask,maskEff=default.maskEff, runs=10){
+findAvg <- function(classSize=default.classSize,noYears=default.noYears,subjectTeachers=default.subjectTeachers,maxTime=default.maxTime,backgroundROI=default.backgroundROI,gammaParams=default.gammaParams,testType=default.testType,probs=default.probs,quarantineTime=default.quarantineTime,catchRate=default.catchRate,testDays=default.testDays,startingInfected=default.startingInfected,quarantineThreshold=default.quarantineThreshold,teacherInfective=default.teacherInfective,teacherInfectible=default.teacherInfectible,teacherTeacher=default.teacherTeacher,classMult=default.classMult,nonClass=default.nonClass,weekend=default.weekend,maxIPeriod=default.maxIPeriod,percVacc=default.percVacc,vaccEff=default.vaccEff,whoMask=default.whoMask,maskEff=default.maskEff, runs=10){
   summary<-NULL
   populations<-data.frame("S"=rep(0,maxTime),"I"=rep(0,maxTime),"Q"=rep(0,maxTime),"R"=rep(0,maxTime))
   for (i in 1:runs){
-    res <- sim(classSize, noYears, subjectTeachers, maxTime, backgroundROI, gammaParams, testType, probs, quarantineTime, catchRate, testDays, startingInfected, quarantineThreshold, teacherInfective, teacherInfectible, teacherTeacher, nonClass, weekend, maxIPeriod, percVacc, vaccEff, whoMask, maskEff)
+    res <- sim(classSize, noYears, subjectTeachers, maxTime, backgroundROI, gammaParams, testType, probs, quarantineTime, catchRate, testDays, startingInfected, quarantineThreshold, teacherInfective, teacherInfectible, teacherTeacher, classMult, nonClass, weekend, maxIPeriod, percVacc, vaccEff, whoMask, maskEff)
     summary<-rbind(summary,res$summary)
     populations<-populations+res$populations
   }
@@ -79,6 +80,7 @@ str<-paste(str,paste("Threshold of quarantining individuals considered noteworth
 str<-paste(str,paste("Teacher to their student infection multiplier set to", default.teacherInfective),"\n",sep="")
 str<-paste(str,paste("Student to their teacher infection multiplier set to", default.teacherInfectible),"\n",sep="")
 str<-paste(str,paste("Teacher to teacher infection multiplier set to", default.teacherTeacher),"\n",sep="")
+str<-paste(str,paste("Infection multiplier for students in same class set to",  default.classMult),"\n",sep="")
 str<-paste(str,paste("Infection multiplier for students in seperate classes set to",  default.nonClass),"\n",sep="")
 str<-paste(str,paste("During weekends, probability of infection from school is multiplied by",default.weekend[1],"whilst infection from other sources is multiplied by",default.weekend[2]),"\n",sep="")
 str<-paste(str,paste("The maximum possible time to be infectious is taken to be", default.maxIPeriod),"\n",sep="")
@@ -95,38 +97,21 @@ popPlot<-function(data, label){
 ```
 
 ```{r}
-baseCase<-findAvg(runs=3)
-test<-findAvg(runs=3,percVacc=0)
-test2<-findAvg(runs=3,vaccEff=list("spread"=0.7,"catch"=0.6))
-test3<-findAvg(runs=3,percVacc=0.7)
-test4<-findAvg(runs=3,maskEff=1)
-test5<-findAvg(runs=3,whoMask=c("none"))
-test6<-findAvg(runs=3,testType = "PCR", testDays=c(-1))
-test7<-findAvg(runs=3,testType = "None")
+combineFinal<-function(dataList){
+  results<-NULL
+  for (i in names(dataList)){
+    results<-rbind(results,cbind(name=i,dataList[[i]]$summary))
+    popPlot(dataList[[i]]$populations,i)
+  }
+  kable(t(results))
+}
 
-
-results <- cbind(name="Base Case",baseCase$summary)
-results <- rbind(results,cbind(name="No Vacc",test$summary))
-results <- rbind(results,cbind(name="More Effective Vacc",test2$summary))
-results <- rbind(results,cbind(name="More Vacc",test3$summary))
-results <- rbind(results,cbind(name="100% mask Eff",test4$summary))
-results <- rbind(results,cbind(name="No Masks",test5$summary))
-results <- rbind(results,cbind(name="PCR 1 p/w",test6$summary))
-results <- rbind(results,cbind(name="No Test",test7$summary))
 ```
-
-
 ```{r}
-kable(t(results))
-```
-
-```{r, fig.show="hold", out.width="50%"}
-popPlot(baseCase$populations,"Base Case")
-popPlot(test$populations,"No Vacc")
-popPlot(test2$populations,"More Effective Vacc")
-popPlot(test3$populations,"More Vacc")
-popPlot(test4$populations,"100% mask Eff")
-popPlot(test5$populations,"No Masks")
-popPlot(test6$populations,"PCR 1 p/w")
-popPlot(test7$populations,"No Test")
+combineFinal(list(
+  "Base Case"=findAvg(runs=3),
+  "PCR 1 p/w"=test6<-findAvg(runs=3,testType = "PCR", testDays=c(1)),
+  "No Test"=findAvg(runs=3,testType = "None"),
+  "More Vacc"=test3<-findAvg(runs=3,percVacc=0.7)
+  ))
 ```

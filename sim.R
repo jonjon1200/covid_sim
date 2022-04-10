@@ -1,8 +1,8 @@
 sim <- function(classSize, noYears, subjectTeachers, maxTime, backgroundROI,
                 gammaParams, testType, probs, quarantineTime, catchRate, testDays,
                 startingInfected, quarantineThreshold, teacherInfective, teacherInfectible,
-                teacherTeacher, nonClass, weekend, maxIPeriod, percVacc, vaccEff, whoMask,
-                maskEff){
+                teacherTeacher, classMult, nonClass, weekend, maxIPeriod, percVacc, vaccEff,
+                whoMask, maskEff){
   ## ----setup, include=FALSE----------------------------------------------------
   tb<-Sys.time()
   knitr::opts_chunk$set(echo = TRUE)
@@ -35,7 +35,7 @@ sim <- function(classSize, noYears, subjectTeachers, maxTime, backgroundROI,
   
     
     inGamma <- apply(inClass, 1, function (a)
-    dgamma(as.double(a["timeInState"][[1]]),shape=gammaParams["spread.shape"],scale=gammaParams["spread.scale"])*as.double(a["spreadMult"]) )
+    dgamma(as.double(a["timeInState"][[1]]),shape=gammaParams["spread.shape"],scale=gammaParams["spread.scale"])*as.double(a["spreadMult"]) )*classMult
     outGamma <-apply(outClass, 1, function (a)
     dgamma(as.double(a["timeInState"][[1]]),shape=gammaParams["spread.shape"],scale=gammaParams["spread.scale"])*as.double(a["spreadMult"]) )*nonClass #Discount non class
     
@@ -47,7 +47,7 @@ sim <- function(classSize, noYears, subjectTeachers, maxTime, backgroundROI,
     if(student["state"]=="S"){
       infected <- data.frame(as.matrix(subset(timeList[[time]],(state=="I")))) #Auto doesn't include student as already known to be in S
       studentNo <- gammaRate(infected, student["yearID"], student["studentOrTeacher"])
-      if ((time%%7) %in% c(6,7)){
+      if ((time%%7) %in% c(5,6)){
         studentNo <- studentNo*weekend[1]
         backgroundROI <- backgroundROI*weekend[2]
       }#Basic weekend discount
@@ -56,9 +56,9 @@ sim <- function(classSize, noYears, subjectTeachers, maxTime, backgroundROI,
       coinFlipI <- rbinom(1,1,min(1,lambda))
       coinFlipQ <- rbinom(1,1,(1-probs[[testType]][["TN"]]) * as.numeric((time%%7) %in% testDays))
       if (coinFlipQ==1){
-        student["state"]="Q"
+        student["state"]="Qs"
         student["timeInState"]=1
-      }else if (coinFlipI>0){
+      }else if (coinFlipI==1){
         student["state"]="I"
         student["timeInState"]=1
       }else{
@@ -72,7 +72,7 @@ sim <- function(classSize, noYears, subjectTeachers, maxTime, backgroundROI,
       coinFlipI <- rbinom(1,1,min(1,lambda))
       coinFlipQ <- rbinom(1,1,probs[[testType]][["TP"]]*scaledInfectiousness)
       if (coinFlipQ == 1 && (time%%7) %in% testDays){
-        student["state"]="Q"
+        student["state"]="Qi"
         student["timeInState"]=1
       }else if ( coinFlipI == 1 || as.double(student["timeInState"])==maxIPeriod){
         student["state"]="R"
@@ -82,10 +82,13 @@ sim <- function(classSize, noYears, subjectTeachers, maxTime, backgroundROI,
       }
     }
     
-    else if(student["state"]=="Q"){
-      if (student["timeInState"]==quarantineTime){
+    else if(student["state"] %in% c("Qs","Qi")){
+      if (student["timeInState"]==quarantineTime & student["state"]=="Qi"){
         student["state"]="R"
         student["timeInState"]=1
+      }else if (student["timeInState"]==quarantineTime & student["state"]=="Qs"){
+        student["state"]="S"
+        student["timeInState"]=1         
       }else{
         student["timeInState"]=as.double(student["timeInState"])+1
       }
@@ -132,7 +135,7 @@ sim <- function(classSize, noYears, subjectTeachers, maxTime, backgroundROI,
   for (i in (2:maxTime)){
     Sno <- nrow(filter(timeList[[i]], state=="S"))
     Ino <- nrow(filter(timeList[[i]], state=="I"))
-    Qno <- nrow(filter(timeList[[i]], state=="Q"))
+    Qno <- nrow(filter(timeList[[i]], state%in% c("Qs","Qi")))
     Rno <- popSize-Sno-Ino-Qno
     if (infectionEnd == -1 && Ino == 0){infectionEnd <- i}
     population <- add_row(population, "S"=Sno, "I"=Ino, "Q"=Qno, "R"=Rno)
@@ -142,7 +145,7 @@ sim <- function(classSize, noYears, subjectTeachers, maxTime, backgroundROI,
   classVar <- c()
   classMax <- 0
   for (i in 1:noYears){
-    tmp <- sapply(timeList,function(a)(nrow(a[which(a["yearID"]==i & a["state"]=="Q"),] )))
+    tmp <- sapply(timeList,function(a)(nrow(a[which(a["yearID"]==i & a["state"]%in% c("Qs","Qi")),] )))
       classVar <- c(classVar, var(tmp))
       classMax <- max(classMax, max(tmp))
   }
