@@ -27,7 +27,7 @@ default.subjectTeachers <- 0
 default.maxTime <- 100
 #Rate of infection + background
 default.backgroundROI <- 3300/67000000 
-default.gammaParams <- c("spread.shape"=10,"spread.scale"=0.8,"recover.shape"=17,"recover.scale"=0.8)
+default.gammaParams <- c("spread.shape"=20.5,"spread.scale"=0.6,"recover.shape"=18.6,"recover.scale"=1.2)
 default.testType <- "Lateral"
 default.probs <- list("Lateral"=list("TP"=60/100,"TN"=95/100),"PCR"=list("TP"=90/100,"TN"=99.2/100), "None"=list("TP"=0,"TN"=1))
 default.quarantineTime=5
