@@ -30,9 +30,9 @@ default.backgroundROI <- 3300/67000000
 default.gammaParams <- c("spread.shape"=20.5,"spread.scale"=0.6,"recover.shape"=18.6,"recover.scale"=1.2)
 default.testType <- "Lateral"
 default.probs <- list("Lateral"=list("TP"=60/100,"TN"=95/100),"PCR"=list("TP"=90/100,"TN"=99.2/100), "None"=list("TP"=0,"TN"=1))
-default.quarantineTime=5
+default.quarantineTime=10
 default.catchRate <- 0.9
-default.testDays <- c(5,0)
+default.testDays <- c(0,4)
 default.startingInfected <- 5
 default.quarantineThreshold <- 30
 default.teacherInfective <- 6
@@ -42,7 +42,7 @@ default.classMult <- 3
 default.nonClass <- 0.6
 default.weekend <- c(0.3,10)
 default.maxIPeriod <- 20
-default.percVacc <- 0.0
+default.percVacc <- 0.20
 default.vaccEff <- list("spread"=0.35,"catch"=0.6)
 default.whoMask <- c("None")
 default.maskEff <- 0.6
