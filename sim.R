@@ -1,4 +1,4 @@
-sim <- function(classSize, noYears, subjectTeachers, maxTime, backgroundROI,
+sim <- function(classSize, noYears, maxTime, backgroundROI,
                 gammaParams, testType, probs, quarantineTime, catchRate, testDays,
                 startingInfected, quarantineThreshold, teacherInfective, teacherInfectible,
                 teacherTeacher, classMult, nonClass, weekend, maxIPeriod, percVacc, vaccEff,
@@ -102,7 +102,7 @@ sim <- function(classSize, noYears, subjectTeachers, maxTime, backgroundROI,
   
   
   ## ----Start variables---------------------------------------------------------
-  popSize <- (classSize+1)*noYears + subjectTeachers
+  popSize <- (classSize+1)*noYears 
   studentID = c(1:popSize)
   yearID <- sort(rep(1:noYears,(classSize+1)))
   spreadMult <- rnorm(popSize, mean=1, sd=0.1)
@@ -115,8 +115,7 @@ sim <- function(classSize, noYears, subjectTeachers, maxTime, backgroundROI,
   spreadMult[vaccinated]<-spreadMult[vaccinated]*(1-vaccEff$spread)
   catchMult[vaccinated]<-catchMult[vaccinated]*(1-vaccEff$catch)
   spreadMult[which(studentOrTeacher %in% whoMask)] <- spreadMult[which(studentOrTeacher %in% whoMask)]*(1-maskEff)
-  if(length(vaccinated)==0){vaccinated=1000}
-  
+
   school <- tibble(studentID, yearID, spreadMult, catchMult, state, timeInState, studentOrTeacher)
   multFrame <- tibble(studentID, spreadMult, catchMult)
   
@@ -144,12 +143,13 @@ sim <- function(classSize, noYears, subjectTeachers, maxTime, backgroundROI,
   ## ----Class Info--------------------------------------------------------------
   classVar <- c()
   classMax <- 0
-  for (i in 1:noYears){
-    tmp <- sapply(timeList,function(a)(nrow(a[which(a["yearID"]==i & a["state"]%in% c("Qs","Qi")),] )))
-      classVar <- c(classVar, var(tmp))
-      classMax <- max(classMax, max(tmp))
-  }
   
+  for (i in 1:noYears){
+    tmp <- sapply(timeList,function(a)(length(which(a["yearID"]==i & a["state"]==c("Qs","Qi")) )))
+    classVar <- c(classVar, var(tmp))
+    classMax <- max(classMax, max(tmp))
+  }
+
   
   ## ----Summary-----------------------------------------------------------------
   summaryInfo <- data.frame(
@@ -160,8 +160,8 @@ sim <- function(classSize, noYears, subjectTeachers, maxTime, backgroundROI,
   "overThreshold"=length(population["Q"][population["Q"]>quarantineThreshold]),
   "meanVar"=mean(classVar),
   "meanInfperDay"=mean(population[2:maxTime,"R"]-population[1:(maxTime-1),"R"]),
-  "percVaccInfected"=length(which(timeList[[100]][vaccinated,"state"]=="R" | timeList[[100]][vaccinated,"state"]=="I"))/length(vaccinated),
-  "percUnVaccInfeced"=length(which(timeList[[100]][-vaccinated,"state"]=="R" | timeList[[100]][-vaccinated,"state"]=="I"))/(popSize-length(vaccinated)),
+  "percVaccInfected"=if(percVacc!=0)length(which(timeList[[100]][vaccinated,"state"]=="R" | timeList[[100]][vaccinated,"state"]=="I"))/length(vaccinated) else 0,
+  "percUnVaccInfeced"=if(percVacc!=1)length(which(timeList[[100]][-vaccinated,"state"]=="R" | timeList[[100]][-vaccinated,"state"]=="I"))/(popSize-length(vaccinated)) else 0,
   "runTime"=as.double(Sys.time()-tb)
   ) 
   return(list("summary"=summaryInfo,"populations"=population))
