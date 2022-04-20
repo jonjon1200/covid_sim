@@ -24,22 +24,22 @@ source("sim.R")$value
 default.classSize <- 30
 default.noYears <- 6
 default.maxTime <- 150
-#Rate of infection + background
-default.backgroundROI <- 3300/67000000 
+default.catchRate <- 0.7
+default.backgroundROI <- 428.7/100000 * default.catchRate
 default.gammaParams <- c("spread.shape"=20.5,"spread.scale"=0.6,"recover.shape"=18.6,"recover.scale"=1.2)
 default.testType <- "Lateral"
 default.probs <- list("Lateral"=list("TP"=60/100,"TN"=95/100),"PCR"=list("TP"=90/100, "TN"=99.2/100), "None"=list("TP"=0,"TN"=1))
+default.pThreshold <- 2
 default.quarantineTime=10
-default.catchRate <- 0.9
 default.testDays <- c(0,4)
 default.startingInfected <- 5
 default.quarantineThreshold <- 30
 default.teacherInfective <- 6
-default.teacherInfectible <- 6
-default.teacherTeacher <- 3
+default.teacherInfectible <- 3
+default.teacherTeacher <- 12
 default.classMult <- 3
 default.nonClass <- 0.6
-default.weekend <- c(0.3,10)
+default.weekend <- c(0.3,2)
 default.maxIPeriod <- 50
 default.percVacc <- 0.20
 default.vaccEff <- list("spread"=0.35,"catch"=0.6)
@@ -47,11 +47,11 @@ default.whoMask <- c("None")
 default.maskEff <- 0.6
 ```
 ```{r, include=FALSE}
-findAvg <- function(classSize=default.classSize,noYears=default.noYears,maxTime=default.maxTime,backgroundROI=default.backgroundROI,gammaParams=default.gammaParams,testType=default.testType,probs=default.probs,quarantineTime=default.quarantineTime,catchRate=default.catchRate,testDays=default.testDays,startingInfected=default.startingInfected,quarantineThreshold=default.quarantineThreshold,teacherInfective=default.teacherInfective,teacherInfectible=default.teacherInfectible,teacherTeacher=default.teacherTeacher,classMult=default.classMult,nonClass=default.nonClass,weekend=default.weekend,maxIPeriod=default.maxIPeriod,percVacc=default.percVacc,vaccEff=default.vaccEff,whoMask=default.whoMask,maskEff=default.maskEff, runs=10){
+findAvg <- function(classSize=default.classSize,noYears=default.noYears,maxTime=default.maxTime,backgroundROI=default.backgroundROI,gammaParams=default.gammaParams,testType=default.testType,probs=default.probs,pThreshold=default.pThreshold,quarantineTime=default.quarantineTime,catchRate=default.catchRate,testDays=default.testDays,startingInfected=default.startingInfected,quarantineThreshold=default.quarantineThreshold,teacherInfective=default.teacherInfective,teacherInfectible=default.teacherInfectible,teacherTeacher=default.teacherTeacher,classMult=default.classMult,nonClass=default.nonClass,weekend=default.weekend,maxIPeriod=default.maxIPeriod,percVacc=default.percVacc,vaccEff=default.vaccEff,whoMask=default.whoMask,maskEff=default.maskEff, runs=10){
   summary<-NULL
   populations<-data.frame("S"=rep(0,maxTime),"I"=rep(0,maxTime),"Q"=rep(0,maxTime),"R"=rep(0,maxTime))
   for (i in 1:runs){
-    res <- sim(classSize, noYears, maxTime, backgroundROI, gammaParams, testType, probs, quarantineTime, catchRate, testDays, startingInfected, quarantineThreshold, teacherInfective, teacherInfectible, teacherTeacher, classMult, nonClass, weekend, maxIPeriod, percVacc, vaccEff, whoMask, maskEff)
+    res <- sim(classSize, noYears, maxTime, backgroundROI, gammaParams, testType, probs, pThreshold, quarantineTime, catchRate, testDays, startingInfected, quarantineThreshold, teacherInfective, teacherInfectible, teacherTeacher, classMult, nonClass, weekend, maxIPeriod, percVacc, vaccEff, whoMask, maskEff)
     summary<-rbind(summary,res$summary)
     populations<-populations+res$populations
   }
@@ -107,10 +107,10 @@ combineFinal<-function(dataList){
 ```
 ```{r}
 combineFinal(list(
-  "Base Case"=findAvg(runs=1),
-  "PCR 1 p/w"=findAvg(runs=3,testType = "PCR", testDays=c(1)),
-  "No Test"=findAvg(runs=3,testType = "None"),
-  "More Vacc"=findAvg(runs=3,percVacc=0.7),
-  "No Vacc"=findAvg(runs=3,percVacc=0)
+  "Base Case"=findAvg(),
+  "PCR 1 p/w"=findAvg(testType = "PCR", testDays=c(1), pThreshold=1),
+  "No Test"=findAvg(testType = "None"),
+  "More Vacc"=findAvg(percVacc=0.7),
+  "No Vacc"=findAvg(percVacc=0)
   ))
 ``` 

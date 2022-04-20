@@ -1,5 +1,5 @@
 sim <- function(classSize, noYears, maxTime, backgroundROI,
-                gammaParams, testType, probs, quarantineTime, catchRate, testDays,
+                gammaParams, testType, probs, pThreshold, quarantineTime, catchRate, testDays,
                 startingInfected, quarantineThreshold, teacherInfective, teacherInfectible,
                 teacherTeacher, classMult, nonClass, weekend, maxIPeriod, percVacc, vaccEff,
                 whoMask, maskEff){
@@ -54,8 +54,8 @@ sim <- function(classSize, noYears, maxTime, backgroundROI,
   
       lambda <- backgroundROI + as.double(student["catchMult"][[1]]) * catchRate *  studentNo/popSize
       coinFlipI <- rbinom(1,1,min(1,lambda))
-      coinFlipQ <- rbinom(1,1,(1-probs[[testType]][["TN"]]) * as.numeric((time%%7) %in% testDays))
-      if (coinFlipQ==1){
+      coinFlipQ <- rbinom(1,pThreshold,(1-probs[[testType]][["TN"]]) * as.numeric((time%%7) %in% testDays))
+      if (coinFlipQ==pThreshold){
         student["state"]="Qs"
         student["timeInState"]=1
       }else if (coinFlipI==1){
@@ -70,8 +70,8 @@ sim <- function(classSize, noYears, maxTime, backgroundROI,
       lambda <- dgamma(as.double(student["timeInState"][[1]]),shape=gammaParams["recover.shape"],scale=gammaParams["recover.scale"])
       scaledInfectiousness <-  dgamma(as.double(student["timeInState"][[1]]),shape=gammaParams["spread.shape"],scale=gammaParams["spread.scale"]) / dgamma(gammaParams["spread.shape"]*gammaParams["spread.scale"],shape=gammaParams["spread.shape"],scale=gammaParams["spread.scale"])
       coinFlipI <- rbinom(1,1,min(1,lambda))
-      coinFlipQ <- rbinom(1,1,probs[[testType]][["TP"]]*scaledInfectiousness)
-      if (coinFlipQ == 1 && (time%%7) %in% testDays){
+      coinFlipQ <- rbinom(1,pThreshold,probs[[testType]][["TP"]]*scaledInfectiousness)
+      if (coinFlipQ == pThreshold && (time%%7) %in% testDays){
         student["state"]="Qi"
         student["timeInState"]=1
       }else if ( coinFlipI == 1 || as.double(student["timeInState"])==maxIPeriod){
