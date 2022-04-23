@@ -67,14 +67,14 @@ sim <- function(classSize, noYears, maxTime, backgroundROI,
     }
     
     else if(student["state"]=="I"){
-      lambda <- dgamma(as.double(student["timeInState"][[1]]),shape=gammaParams["recover.shape"],scale=gammaParams["recover.scale"])
+      lambda <- diff(pgamma(c(as.double(student["timeInState"][[1]])-1,as.double(student["timeInState"][[1]])),shape=gammaParams["recover.shape"],scale=gammaParams["recover.scale"]))
       scaledInfectiousness <-  dgamma(as.double(student["timeInState"][[1]]),shape=gammaParams["spread.shape"],scale=gammaParams["spread.scale"]) / dgamma(gammaParams["spread.shape"]*gammaParams["spread.scale"],shape=gammaParams["spread.shape"],scale=gammaParams["spread.scale"])
-      coinFlipI <- rbinom(1,1,min(1,lambda))
+      coinFlipR <- rbinom(1,1,lambda)
       coinFlipQ <- rbinom(1,pThreshold,probs[[testType]][["TP"]]*scaledInfectiousness)
       if (coinFlipQ == pThreshold && (time%%7) %in% testDays){
         student["state"]="Qi"
         student["timeInState"]=1
-      }else if ( coinFlipI == 1 || as.double(student["timeInState"])==maxIPeriod){
+      }else if ( coinFlipR == 1 || as.double(student["timeInState"])==maxIPeriod){
         student["state"]="R"
         student["timeInState"]=1
       }else{
@@ -160,8 +160,8 @@ sim <- function(classSize, noYears, maxTime, backgroundROI,
   "overThreshold"=length(population["Q"][population["Q"]>quarantineThreshold]),
   "meanVar"=mean(classVar),
   "meanInfperDay"=mean(population[2:maxTime,"R"]-population[1:(maxTime-1),"R"]),
-  "percVaccInfected"=if(percVacc!=0)length(which(timeList[[100]][vaccinated,"state"]=="R" | timeList[[100]][vaccinated,"state"]=="I"))/length(vaccinated) else 0,
-  "percUnVaccInfeced"=if(percVacc!=1)length(which(timeList[[100]][-vaccinated,"state"]=="R" | timeList[[100]][-vaccinated,"state"]=="I"))/(popSize-length(vaccinated)) else 0,
+  "percVaccInfected"=if(percVacc==0) NA else length(which(timeList[[100]][vaccinated,"state"]=="R" | timeList[[100]][vaccinated,"state"]=="I"))/length(vaccinated),
+  "percUnVaccInfeced"=if(percVacc==1) NA else length(which(timeList[[100]][-vaccinated,"state"]=="R" | timeList[[100]][-vaccinated,"state"]=="I"))/(popSize-length(vaccinated)),
   "runTime"=as.double(Sys.time()-tb)
   ) 
   return(list("summary"=summaryInfo,"populations"=population))

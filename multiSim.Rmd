@@ -55,7 +55,7 @@ findAvg <- function(classSize=default.classSize,noYears=default.noYears,maxTime=
     summary<-rbind(summary,res$summary)
     populations<-populations+res$populations
   }
-  result <- list("summary"=data.frame(t(colMeans(summary))),"populations"=populations/10)
+  result <- list("summary"=data.frame(t(colMeans(summary))), "populations"=populations/runs)
   return(result)
 }  
 ```
