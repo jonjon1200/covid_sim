@@ -45,13 +45,15 @@ default.percVacc <- 0.20
 default.vaccEff <- list("spread"=0.35,"catch"=0.6)
 default.whoMask <- c("None")
 default.maskEff <- 0.6
+default.asymRate<-0.5
+deafult.asymDiscount<-.75
 ```
 ```{r, include=FALSE}
-findAvg <- function(classSize=default.classSize,noYears=default.noYears,maxTime=default.maxTime,backgroundROI=default.backgroundROI,gammaParams=default.gammaParams,testType=default.testType,probs=default.probs,pThreshold=default.pThreshold,quarantineTime=default.quarantineTime,catchRate=default.catchRate,testDays=default.testDays,startingInfected=default.startingInfected,quarantineThreshold=default.quarantineThreshold,teacherInfective=default.teacherInfective,teacherInfectible=default.teacherInfectible,teacherTeacher=default.teacherTeacher,classMult=default.classMult,nonClass=default.nonClass,weekend=default.weekend,maxIPeriod=default.maxIPeriod,percVacc=default.percVacc,vaccEff=default.vaccEff,whoMask=default.whoMask,maskEff=default.maskEff, runs=10){
+findAvg <- function(classSize=default.classSize,noYears=default.noYears,maxTime=default.maxTime,backgroundROI=default.backgroundROI,gammaParams=default.gammaParams,testType=default.testType,probs=default.probs,pThreshold=default.pThreshold,quarantineTime=default.quarantineTime,catchRate=default.catchRate,testDays=default.testDays,startingInfected=default.startingInfected,quarantineThreshold=default.quarantineThreshold,teacherInfective=default.teacherInfective,teacherInfectible=default.teacherInfectible,teacherTeacher=default.teacherTeacher,classMult=default.classMult,nonClass=default.nonClass,weekend=default.weekend,maxIPeriod=default.maxIPeriod,percVacc=default.percVacc,vaccEff=default.vaccEff,whoMask=default.whoMask,maskEff=default.maskEff,asymRate=default.asymRate,asymDiscount=deafult.asymDiscount, runs=10){
   summary<-NULL
   populations<-data.frame("S"=rep(0,maxTime),"I"=rep(0,maxTime),"Q"=rep(0,maxTime),"R"=rep(0,maxTime))
   for (i in 1:runs){
-    res <- sim(classSize, noYears, maxTime, backgroundROI, gammaParams, testType, probs, pThreshold, quarantineTime, catchRate, testDays, startingInfected, quarantineThreshold, teacherInfective, teacherInfectible, teacherTeacher, classMult, nonClass, weekend, maxIPeriod, percVacc, vaccEff, whoMask, maskEff)
+    res <- sim(classSize, noYears, maxTime, backgroundROI, gammaParams, testType, probs, pThreshold, quarantineTime, catchRate, testDays, startingInfected, quarantineThreshold, teacherInfective, teacherInfectible, teacherTeacher, classMult, nonClass, weekend, maxIPeriod, percVacc, vaccEff, whoMask, maskEff,asymRate,asymDiscount)
     summary<-rbind(summary,res$summary)
     populations<-populations+res$populations
   }

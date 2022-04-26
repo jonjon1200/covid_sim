@@ -2,7 +2,7 @@ sim <- function(classSize, noYears, maxTime, backgroundROI,
                 gammaParams, testType, probs, pThreshold, quarantineTime, catchRate, testDays,
                 startingInfected, quarantineThreshold, teacherInfective, teacherInfectible,
                 teacherTeacher, classMult, nonClass, weekend, maxIPeriod, percVacc, vaccEff,
-                whoMask, maskEff){
+                whoMask, maskEff,asymRate,asymDiscount){
   ## ----setup, include=FALSE----------------------------------------------------
   tb<-Sys.time()
   knitr::opts_chunk$set(echo = TRUE)
@@ -39,7 +39,7 @@ sim <- function(classSize, noYears, maxTime, backgroundROI,
     outGamma <-apply(outClass, 1, function (a)
     dgamma(as.double(a["timeInState"][[1]]),shape=gammaParams["spread.shape"],scale=gammaParams["spread.scale"])*as.double(a["spreadMult"]) )*nonClass #Discount non class
     
-    scaledGamma <- (sum(inGamma)+sum(outGamma))/dgamma(gammaParams["spread.shape"]*gammaParams["spread.scale"],shape=gammaParams["spread.shape"],scale=gammaParams["spread.scale"])
+    scaledGamma <- (sum(inGamma)+sum(outGamma))/meanGamma
     return(scaledGamma)
   }
   
@@ -68,9 +68,9 @@ sim <- function(classSize, noYears, maxTime, backgroundROI,
     
     else if(student["state"]=="I"){
       lambda <- diff(pgamma(c(as.double(student["timeInState"][[1]])-1,as.double(student["timeInState"][[1]])),shape=gammaParams["recover.shape"],scale=gammaParams["recover.scale"]))
-      scaledInfectiousness <-  dgamma(as.double(student["timeInState"][[1]]),shape=gammaParams["spread.shape"],scale=gammaParams["spread.scale"]) / dgamma(gammaParams["spread.shape"]*gammaParams["spread.scale"],shape=gammaParams["spread.shape"],scale=gammaParams["spread.scale"])
+      scaledInfectiousness <-  dgamma(as.double(student["timeInState"][[1]]),shape=gammaParams["spread.shape"],scale=gammaParams["spread.scale"]) / meanGamma
       coinFlipR <- rbinom(1,1,lambda)
-      coinFlipQ <- rbinom(1,pThreshold,probs[[testType]][["TP"]]*scaledInfectiousness)
+      coinFlipQ <- rbinom(1,pThreshold,min(1,probs[[testType]][["TP"]]*scaledInfectiousness))
       if (coinFlipQ == pThreshold && (time%%7) %in% testDays){
         student["state"]="Qi"
         student["timeInState"]=1
@@ -102,6 +102,7 @@ sim <- function(classSize, noYears, maxTime, backgroundROI,
   
   
   ## ----Start variables---------------------------------------------------------
+  meanGamma<-integrate(function(x)dgamma(x,shape=gammaParams["spread.shape"],scale=gammaParams["spread.scale"])^2,0,Inf)$value
   popSize <- (classSize+1)*noYears 
   studentID = c(1:popSize)
   yearID <- sort(rep(1:noYears,(classSize+1)))
@@ -115,7 +116,8 @@ sim <- function(classSize, noYears, maxTime, backgroundROI,
   spreadMult[vaccinated]<-spreadMult[vaccinated]*(1-vaccEff$spread)
   catchMult[vaccinated]<-catchMult[vaccinated]*(1-vaccEff$catch)
   spreadMult[which(studentOrTeacher %in% whoMask)] <- spreadMult[which(studentOrTeacher %in% whoMask)]*(1-maskEff)
-
+  asym<-sample(popSize,round(popSize*asymRate))
+  spreadMult[asym]<-spreadMult[asym]*asymDiscount
   school <- tibble(studentID, yearID, spreadMult, catchMult, state, timeInState, studentOrTeacher)
   multFrame <- tibble(studentID, spreadMult, catchMult)
   
