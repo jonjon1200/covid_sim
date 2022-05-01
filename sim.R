@@ -5,13 +5,9 @@ sim <- function(classSize, noYears, maxTime, backgroundROI,
                 whoMask, maskEff,asymRate,asymDiscount){
   ## ----setup, include=FALSE----------------------------------------------------
   tb<-Sys.time()
-  knitr::opts_chunk$set(echo = TRUE)
   library(tibble)
-  library(knitr)
-  library(formatR)
   library(dplyr)
-  opts_chunk$set(tidy.opts=list(width.cutoff=60),tidy=TRUE)
-  
+
   
   ## ----functions---------------------------------------------------------------
   gammaRate <- function(infected, year, tOrS){
@@ -132,13 +128,13 @@ sim <- function(classSize, noYears, maxTime, backgroundROI,
   
   ## ----Plotting----------------------------------------------------------------
   population <- data.frame("S"=popSize-startingInfected,"I"=startingInfected, "Q"=0, "R"=0)
-  infectionEnd <- -1
+  infectionEnd <- NA
   for (i in (2:maxTime)){
     Sno <- nrow(filter(timeList[[i]], state=="S"))
     Ino <- nrow(filter(timeList[[i]], state=="I"))
     Qno <- nrow(filter(timeList[[i]], state%in% c("Qs","Qi")))
     Rno <- popSize-Sno-Ino-Qno
-    if (infectionEnd == -1 && Ino == 0){infectionEnd <- i}
+    if (is.na(infectionEnd) && Ino == 0){infectionEnd <- i}
     population <- add_row(population, "S"=Sno, "I"=Ino, "Q"=Qno, "R"=Rno)
   }
   
@@ -151,8 +147,15 @@ sim <- function(classSize, noYears, maxTime, backgroundROI,
     classVar <- c(classVar, var(tmp))
     classMax <- max(classMax, max(tmp))
   }
-
   
+  totalTests<-0
+  for (i in 1:maxTime){
+    if((i%%7) %in% testDays){
+      totalTests<-totalTests+population[i,"S"]+population[i,"I"]
+    }
+  }
+
+  if (percVacc==0) vaccinated<-popSize+1
   ## ----Summary-----------------------------------------------------------------
   summaryInfo <- data.frame(
   "totalQ"=sum(population["Q"]),
@@ -161,9 +164,10 @@ sim <- function(classSize, noYears, maxTime, backgroundROI,
   "infectionEnd"=infectionEnd,
   "overThreshold"=length(population["Q"][population["Q"]>quarantineThreshold]),
   "meanVar"=mean(classVar),
-  "meanInfperDay"=mean(population[2:maxTime,"R"]-population[1:(maxTime-1),"R"]),
-  "percVaccInfected"=if(percVacc==0) NA else length(which(timeList[[100]][vaccinated,"state"]=="R" | timeList[[100]][vaccinated,"state"]=="I"))/length(vaccinated),
-  "percUnVaccInfeced"=if(percVacc==1) NA else length(which(timeList[[100]][-vaccinated,"state"]=="R" | timeList[[100]][-vaccinated,"state"]=="I"))/(popSize-length(vaccinated)),
+  "classMax"=classMax,
+  "percVaccInfected"=if(percVacc==0) NA else length(which(timeList[[maxTime]][vaccinated,"state"]=="R" | timeList[[maxTime]][vaccinated,"state"]=="I"))/length(vaccinated),
+  "percUnVaccInfeced"=if(percVacc==1) NA else length(which(timeList[[maxTime]][-vaccinated,"state"]=="R" | timeList[[maxTime]][-vaccinated,"state"]=="I"))/(popSize-length(vaccinated)),
+  "totalTests"=totalTests,
   "runTime"=as.double(Sys.time()-tb)
   ) 
   return(list("summary"=summaryInfo,"populations"=population))

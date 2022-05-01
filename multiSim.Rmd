@@ -10,10 +10,9 @@ output:
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
-knitr::opts_chunk$set(tidy.opts=list(width.cutoff=60),tidy=TRUE)
-library(ggplot2)
 library(knitr)
+opts_chunk$set(echo = TRUE)
+opts_chunk$set(tidy.opts=list(width.cutoff=60),tidy=TRUE)
 ```
 
 ```{r, include=FALSE}
@@ -23,7 +22,7 @@ source("sim.R")$value
 ```{r, include=FALSE}
 default.classSize <- 30
 default.noYears <- 6
-default.maxTime <- 150
+default.maxTime <- 175
 default.catchRate <- 0.7
 default.backgroundROI <- 428.7/100000 * default.catchRate
 default.gammaParams <- c("spread.shape"=20.5,"spread.scale"=0.6,"recover.shape"=18.6,"recover.scale"=1.2)
@@ -31,7 +30,7 @@ default.testType <- "Lateral"
 default.probs <- list("Lateral"=list("TP"=60/100,"TN"=95/100),"PCR"=list("TP"=90/100, "TN"=99.2/100), "None"=list("TP"=0,"TN"=1))
 default.pThreshold <- 2
 default.quarantineTime=10
-default.testDays <- c(0,4)
+default.testDays <- c(0,3)
 default.startingInfected <- 5
 default.quarantineThreshold <- 30
 default.teacherInfective <- 6
@@ -41,7 +40,7 @@ default.classMult <- 3
 default.nonClass <- 0.6
 default.weekend <- c(0.3,2)
 default.maxIPeriod <- 50
-default.percVacc <- 0.20
+default.percVacc <- 0.25
 default.vaccEff <- list("spread"=0.35,"catch"=0.6)
 default.whoMask <- c("None")
 default.maskEff <- 0.6
@@ -91,8 +90,8 @@ cat(str)
 
 ```{r}
 popPlot<-function(data, label){
-  barplot(t(as.matrix(data)), col=c("cyan","yellow", "grey","red"), xlab="Days", ylab="Individuals", names.arg=(1:nrow(data)),main=label)
-  legend("topright", colnames(data), fill=c("cyan","yellow", "grey","red"), bg="white")
+  barplot(t(as.matrix(data)), col=c("cyan","yellow", "grey","red"), xlab="Days", ylab="Individuals", names.arg=(1:nrow(data)),main=label, cex.names=1.5)
+  legend("topright", colnames(data), fill=c("cyan","yellow", "grey","red"), bg="white",cex=1.5)
 }
 ```
 
@@ -107,12 +106,38 @@ combineFinal<-function(dataList){
 }
 
 ```
+
+
 ```{r}
 combineFinal(list(
-  "Base Case"=findAvg(),
+  "Base Case"=findAvg()
+  ))
+```
+
+
+```{r}
+combineFinal(list(
   "PCR 1 p/w"=findAvg(testType = "PCR", testDays=c(1), pThreshold=1),
-  "No Test"=findAvg(testType = "None"),
-  "More Vacc"=findAvg(percVacc=0.7),
-  "No Vacc"=findAvg(percVacc=0)
+  "Less Sensitive 3 p/w"=findAvg(testType = "Less", probs=list("Less"=list("TP"=0.2,"TN"=0.8)), testDays = c(0,3,5))
   ))
 ``` 
+
+
+```{r}
+combineFinal(list(
+  "No Vacc"=findAvg(percVacc=0),
+  "Half Vacc"=findAvg(percVacc=0.5),
+  "3/4 Vacc"=findAvg(percVacc=0.75),
+  "Full Vacc"=findAvg(percVacc=1)
+  ))
+```
+
+
+```{r}
+combineFinal(list(
+  "Teacher Mask"=findAvg(whoMask=c("t")),
+  "All Mask"=findAvg(whoMask=c("t","s")),
+  "All Mask + discount"=findAvg(whoMask = c("t","s"), maskEff = 0.4)
+  ))
+
+```
