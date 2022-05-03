@@ -4,7 +4,6 @@ sim <- function(classSize, noYears, maxTime, backgroundROI,
                 teacherTeacher, classMult, nonClass, weekend, maxIPeriod, percVacc, vaccEff,
                 whoMask, maskEff,asymRate,asymDiscount){
   ## ----setup, include=FALSE----------------------------------------------------
-  tb<-Sys.time()
   library(tibble)
   library(dplyr)
 
@@ -167,8 +166,7 @@ sim <- function(classSize, noYears, maxTime, backgroundROI,
   "classMax"=classMax,
   "percVaccInfected"=if(percVacc==0) NA else length(which(timeList[[maxTime]][vaccinated,"state"]=="R" | timeList[[maxTime]][vaccinated,"state"]=="I"))/length(vaccinated),
   "percUnVaccInfeced"=if(percVacc==1) NA else length(which(timeList[[maxTime]][-vaccinated,"state"]=="R" | timeList[[maxTime]][-vaccinated,"state"]=="I"))/(popSize-length(vaccinated)),
-  "totalTests"=totalTests,
-  "runTime"=as.double(Sys.time()-tb)
+  "totalTests"=totalTests
   ) 
   return(list("summary"=summaryInfo,"populations"=population))
 }
